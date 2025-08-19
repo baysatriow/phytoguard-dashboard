@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Phytoguard — Soil NPK Monitor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    html,body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji'; }
+    .card { @apply bg-white/80 dark:bg-neutral-900/70 backdrop-blur rounded-2xl shadow-lg p-5 border border-white/30 dark:border-neutral-800; }
+    .metric { @apply text-xs sm:text-sm text-neutral-600 dark:text-neutral-400; }
+    .metric-value { @apply text-xl sm:text-2xl font-extrabold mt-1; }
+    .pill { @apply inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold; }
+    .brand-gradient { background: radial-gradient(1200px 500px at 70% -10%, rgba(78,205,196,0.25), transparent 60%), radial-gradient(1000px 500px at -10% 0%, rgba(123,237,159,0.25), transparent 60%), linear-gradient(180deg, #e8fff4 0%, #f4fff9 30%, #f7fbf8 100%); }
+    .dark .brand-gradient { background: radial-gradient(1200px 500px at 70% -10%, rgba(78,205,196,0.15), transparent 60%), radial-gradient(1000px 500px at -10% 0%, rgba(123,237,159,0.12), transparent 60%), linear-gradient(180deg, #0b1310 0%, #0f1a15 100%); }
+  </style>
+</head>
+<body class="brand-gradient min-h-screen text-neutral-900 dark:text-neutral-100">
+  <div class="max-w-7xl mx-auto p-4 md:p-8">
+    <!-- Header -->
+    <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <img src="/static/logo.png" alt="Phytoguard" class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl shadow" />
+        <div>
+          <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold">Phytoguard</h1>
+          <p class="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400">Real-time Soil NPK &amp; Environment Monitoring</p>
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span id="statusPill" class="pill bg-neutral-200 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">Connecting…</span>
+        <span class="pill bg-neutral-200 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">COM: <span id="comPort" class="font-semibold">—</span></span>
+        <span class="pill bg-neutral-200 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">Baud: <span id="baudrate" class="font-semibold">—</span></span>
+        <span class="pill bg-neutral-200 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">Last Update: <span id="lastUpdated" class="font-semibold">—</span></span>
+      </div>
+    </header>
+
+    <!-- Controls -->
+    <section class="mt-6 card">
+      <div class="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-neutral-500">Display:</span>
+          <div class="inline-flex rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-700">
+            <button id="btnSingle" class="px-4 py-2 text-sm font-semibold bg-white dark:bg-neutral-900">Single</button>
+            <button id="btnAll" class="px-4 py-2 text-sm font-semibold bg-neutral-100 dark:bg-neutral-800">All</button>
+          </div>
+        </div>
+        <div class="flex items-center gap-2" id="metricSelectorRow">
+          <label for="metricSelect" class="text-sm text-neutral-500">Metric:</label>
+          <select id="metricSelect" class="bg-neutral-100 dark:bg-neutral-800 rounded-xl px-3 py-2">
+            <option value="humidity">Humidity (%)</option>
+            <option value="temperature">Temperature (°C)</option>
+            <option value="ph">pH</option>
+            <option value="conductivity">EC (µS/cm)</option>
+            <option value="nitrogen">Nitrogen (mg/kg)</option>
+            <option value="phosphorus">Phosphorus (mg/kg)</option>
+            <option value="potassium">Potassium (mg/kg)</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stat Cards -->
+    <main class="mt-6 grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3">
+      <div class="card"><div class="metric">Humidity</div><div class="metric-value"><span id="valHumidity">—</span><span class="text-xs sm:text-base font-semibold">&nbsp;%</span></div></div>
+      <div class="card"><div class="metric">Temperature</div><div class="metric-value"><span id="valTemp">—</span><span class="text-xs sm:text-base font-semibold">&nbsp;°C</span></div></div>
+      <div class="card"><div class="metric">pH</div><div class="metric-value"><span id="valPh">—</span></div></div>
+      <div class="card"><div class="metric">EC</div><div class="metric-value"><span id="valEC">—</span><span class="text-xs sm:text-base font-semibold">&nbsp;µS/cm</span></div></div>
+      <div class="card"><div class="metric">N</div><div class="metric-value"><span id="valN">—</span><span class="text-xs sm:text-base font-semibold">&nbsp;mg/kg</span></div></div>
+      <div class="card"><div class="metric">P</div><div class="metric-value"><span id="valP">—</span><span class="text-xs sm:text-base font-semibold">&nbsp;mg/kg</span></div></div>
+      <div class="card"><div class="metric">K</div><div class="metric-value"><span id="valK">—</span><span class="text-xs sm:text-base font-semibold">&nbsp;mg/kg</span></div></div>
+      <div class="card"><div class="metric">Sensor</div><div class="metric-value">ID <span id="valID">—</span></div></div>
+    </main>
+
+    <!-- Single Chart -->
+    <section id="singleChartSection" class="mt-6 card">
+      <h2 class="text-xl font-bold mb-4">Live Chart</h2>
+      <div class="w-full">
+        <canvas id="lineChart" class="w-full" height="110"></canvas>
+      </div>
+    </section>
+
+    <!-- Multi Chart -->
+    <section id="multiChartSection" class="hidden mt-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div class="card"><div class="font-semibold mb-2">Humidity (%)</div><canvas id="ch_humidity" height="90"></canvas></div>
+        <div class="card"><div class="font-semibold mb-2">Temperature (°C)</div><canvas id="ch_temperature" height="90"></canvas></div>
+        <div class="card"><div class="font-semibold mb-2">pH</div><canvas id="ch_ph" height="90"></canvas></div>
+        <div class="card"><div class="font-semibold mb-2">EC (µS/cm)</div><canvas id="ch_conductivity" height="90"></canvas></div>
+        <div class="card"><div class="font-semibold mb-2">Nitrogen (mg/kg)</div><canvas id="ch_nitrogen" height="90"></canvas></div>
+        <div class="card"><div class="font-semibold mb-2">Phosphorus (mg/kg)</div><canvas id="ch_phosphorus" height="90"></canvas></div>
+        <div class="card"><div class="font-semibold mb-2">Potassium (mg/kg)</div><canvas id="ch_potassium" height="90"></canvas></div>
+      </div>
+    </section>
+
+    <footer class="mt-10 text-xs text-neutral-500 text-center">
+      © <span id="year"></span> Phytoguard • Built with Flask + SSE + Chart.js
+    </footer>
+  </div>
+
+  <script>document.getElementById("year").textContent = new Date().getFullYear();</script>
+  <script src="/static/app.js"></script>
+</body>
+</html>
